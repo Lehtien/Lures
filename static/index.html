@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="favicon.ico">
+    <title>似ているルアーを探す</title>
+  </head>
+  <body>
+    <div class="contents">
+      <h2>似ているルアーを探す</h1>
+
+      <div>
+        <p>ルアー名で検索：</p>
+        <input type="text" id="input_text" class="input_text">
+        <button type="button" id="text_search_btn" class="text_search_btn">検索</button>
+      </div>
+      <br>
+
+      <p>画像で検索：</p>
+      <p>ファイルをアップロードしてください。</p>
+
+      <input type="file" id="input_file">
+      <img id="input_image" class="input_image"/>
+      <div id="result_image" class="result_image"></div>
+    </div>
+    <div id="loader" class="loader">Loading...</div>
+  </body>
+</html>
+
+<script type="text/javascript">
+  //  画像
+  const input_file = document.getElementById('input_file')
+  const image = document.getElementById('input_image')
+  input_file.addEventListener("change", function(e) {
+    const result_img = document.querySelector('#result_image > div');
+    if (result_img) {
+      result_img.remove();
+    }
+
+    document.getElementById('loader').style.display = "block"
+
+    const file = e.target.files
+    const reader = new FileReader()
+    reader.readAsDataURL(file[0])
+
+    reader.onload = function() {
+      image.src = reader.result;
+      image.style.display = "block";
+    }
+    postFile(file[0])
+  }, false)
+
+  const postFile = (file) => {
+    const formData = new FormData();
+    formData.append("MAX_FILE_SIZE", 2097152);
+    formData.append("upload_file", file);
+
+    fetch("http://localhost:3033/upload", {
+      method: "POST",
+      body: formData,
+      mode: "cors",
+    }).then((response) => {
+      if(response.ok) {
+        return response.json();
+      }
+      return response.json().then((error) => {
+        throw new Error (error.error_message);
+      })
+    }).then((data) => {
+        document.querySelector('#result_image').innerHTML = 
+          `
+            <div>
+              <p class='maybe'>もしかして：</p>
+              <div class="resultLure">
+                <div>
+                  <img src='${data[0].src}' />
+                  <p>${data[0].name}</p>
+                </div>
+                <div>
+                  <img src='${data[1].src}' />
+                  <p>${data[1].name}</p>
+                </div>
+                <div>
+                  <img src='${data[2].src}' />
+                  <p>${data[2].name}</p>
+                </div>
+              </div>
+            </div?
+          `
+
+    }).then(() => {
+      document.getElementById('loader').style.display = "none"
+    })
+    .catch((error) => {
+      document.querySelector('#result_image').innerHTML = 
+          `
+            <div>
+              <p class='error_message'>${error}</p>
+            </div>
+          `
+          document.getElementById('loader').style.display = "none"
+		});
+  }
+
+  // 文字
+  const text_search_btn = document.getElementById('text_search_btn');
+  text_search_btn.addEventListener('click', () => {
+    const input_text = document.getElementById("input_text").value;
+
+    if (input_text == '') return;
+
+    const formData = new FormData();
+    formData.append("input_text", input_text);
+
+    document.getElementById('loader').style.display = "block"
+
+    fetch("http://localhost:3033/search_text", {
+      method: "POST",
+      body: formData,
+      mode: "cors",
+    }).then((response) => {
+        if(response.ok) {
+          return response.json();
+        }
+        return response.json().then((error) => {
+          throw new Error (error.error_message);
+        })
+    }).then((data) => {
+      let result_html = 
+          `
+            <div>
+              <p class='maybe'>もしかして：</p>
+          ` ;
+          
+      if (data !== []) {
+        result_html = "<div class='resultLure'>";
+        if (data[0] != null) {
+          result_html +=
+            `
+              <div>
+                <img src='${data[0].src}' />
+                <p>${data[0].name}</p>
+              </div>
+            `
+        }
+        if (data[1] != null) {
+          result_html +=
+            `
+              <div>
+                <img src='${data[1].src}' />
+                <p>${data[1].name}</p>
+              </div>
+            `
+        }
+        if (data[2] != null) {
+          result_html +=
+            `
+              <div>
+                <img src='${data[2].src}' />
+                <p>${data[2].name}</p>
+              </div>
+            </div>
+            `
+        }
+      result_html += "</div>"
+    }
+
+      
+      result_html += "</div>"
+
+    document.querySelector('#result_image').innerHTML = result_html;
+    }).then(() => {
+      document.getElementById('loader').style.display = "none"
+    }).catch((error) => {
+      document.querySelector('#result_image').innerHTML = 
+          `
+            <div>
+              <p class='error_message'>${error}</p>
+            </div>
+          `
+          document.getElementById('loader').style.display = "none"
+		});
+  })
+
+</script>
+
+<style>
+.contents {
+  padding: 2em 1em;
+}
+h2 {
+  margin-bottom: 2em;
+}
+
+.input_text {
+  width: 20em;
+  height: 1.5em;
+}
+.text_search_btn {
+  width: 4em;
+}
+
+img {
+  display: block;
+  margin: 1em auto;
+  border: 1px solid black;
+  max-width: 480px;
+  width: 80%;
+}
+@media screen and (min-width: 520px) {
+  .contents {
+    padding: 2em 10em;
+  }
+  img {
+    margin: 1em;
+  }
+}
+.input_image {
+  display: none;
+}
+
+.resultLure {
+  display: flex;
+}
+@media screen and (max-width: 724px) {
+  .resultLure {
+    display: block;
+  }
+}
+p.maybe {
+  margin-top: 2em;
+}
+p.error_message {
+  margin-top: 2em;
+  color: red;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  background-color: #88b5d3;
+}
+
+.loader {
+  display: none;
+  font-size: 25px;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  top: 25%;
+  text-indent: -9999em;
+  -webkit-animation: load5 1.1s infinite ease;
+  animation: load5 1.1s infinite ease;
+  transform: translate3d(-50%, -50%, 0);
+}
+@-webkit-keyframes load5 {
+  0%,
+  100% {
+    box-shadow: 0em -2.6em 0em 0em #ffffff, 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.5), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7);
+  }
+  12.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.7), 1.8em -1.8em 0 0em #ffffff, 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5);
+  }
+  25% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.5), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7), 2.5em 0em 0 0em #ffffff, 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  37.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5), 2.5em 0em 0 0em rgba(255, 255, 255, 0.7), 1.75em 1.75em 0 0em #ffffff, 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.5), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.7), 0em 2.5em 0 0em #ffffff, -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  62.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.5), 0em 2.5em 0 0em rgba(255, 255, 255, 0.7), -1.8em 1.8em 0 0em #ffffff, -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  75% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.5), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.7), -2.6em 0em 0 0em #ffffff, -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  87.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.5), -2.6em 0em 0 0em rgba(255, 255, 255, 0.7), -1.8em -1.8em 0 0em #ffffff;
+  }
+}
+@keyframes load5 {
+  0%,
+  100% {
+    box-shadow: 0em -2.6em 0em 0em #ffffff, 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.5), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7);
+  }
+  12.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.7), 1.8em -1.8em 0 0em #ffffff, 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5);
+  }
+  25% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.5), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7), 2.5em 0em 0 0em #ffffff, 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  37.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5), 2.5em 0em 0 0em rgba(255, 255, 255, 0.7), 1.75em 1.75em 0 0em #ffffff, 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.5), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.7), 0em 2.5em 0 0em #ffffff, -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2), -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  62.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.5), 0em 2.5em 0 0em rgba(255, 255, 255, 0.7), -1.8em 1.8em 0 0em #ffffff, -2.6em 0em 0 0em rgba(255, 255, 255, 0.2), -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  75% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.5), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.7), -2.6em 0em 0 0em #ffffff, -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  87.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2), 1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2), 2.5em 0em 0 0em rgba(255, 255, 255, 0.2), 1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2), 0em 2.5em 0 0em rgba(255, 255, 255, 0.2), -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.5), -2.6em 0em 0 0em rgba(255, 255, 255, 0.7), -1.8em -1.8em 0 0em #ffffff;
+  }
+}
+</style>
